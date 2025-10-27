@@ -1,4 +1,4 @@
-# LayoutVLM (local workspace)
+# LayoutVLM modif
 
 Attention : ce dépôt contient des scripts auxiliaires et des expérimentations locales. Pour la documentation complète et officielle du projet LayoutVLM, référez‑vous d'abord au README principal du projet :
 
