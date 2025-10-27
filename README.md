@@ -94,9 +94,13 @@ Remarques sur l'échelle :
 
 Exemple:
 Avec cette image de points à éviter :
+
 <img src="images/points_rouges.png" alt="Texte alternatif" width="400"/>
+
 On passe de ça :
+
 <img src="images/chambre_base.png" alt="Texte alternatif" width="400"/>
+
 A ça :
-![Photo][image/chambre_modif.png]
+
 <img src="images/chambre_modif.png" alt="Texte alternatif" width="400"/>
