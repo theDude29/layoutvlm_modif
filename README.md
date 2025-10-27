@@ -101,6 +101,6 @@ On passe de ça :
 
 <img src="images/chambre_base.png" alt="Texte alternatif" width="400"/>
 
-A ça :
+A ça (l'image représente les points sur un carre 4x4 et la chambre est en 4x5):
 
 <img src="images/chambre_modif.png" alt="Texte alternatif" width="400"/>
