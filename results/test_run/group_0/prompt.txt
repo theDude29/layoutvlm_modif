@@ -1,0 +1,151 @@
+
+Your task is to write a layout program that specifies how to arrange a set of 3D assets in the scene conditioned on the floor plan (i.e., boundary specification). 
+Here are the base class definitions:
+```python
+from math import cos, sin, radians
+from pydantic import BaseModel, Field, conint
+from typing import List, Optional
+
+
+class Wall(BaseModel):
+    corner1: List[float] = Field(description="2d coordinates of the first corner of this wall")
+    corner2: List[float] = Field(description="2d coordinates of the second corner of this wall")
+
+class AssetInstance(BaseModel):
+    position: Optional[List[float]] = Field(description="Position of the asset", default=None)
+    rotation: List[float] = Field(description="counterclockwise rotation of the asset in radians (not degrees). Only consider the last axis as objects are always upright. ", default=[0, 0, 0])
+
+class Assets(BaseModel):
+    description: str = Field(description="Description of the asset")
+    placements: List[AssetInstance] = Field(description="List of asset instances of this 3D asset", default=None)
+    size: Optional[List[float]] = Field(description="Bounding box size of the asset (z-axis up)", default=None)
+
+    def __getitem__(self, index: int) -> AssetInstance:
+        "Allow indexing into placements."
+        return self.placements[index]
+    
+    def __len__(self) -> int:
+        "Allow using len() to get the number of placements."
+        return len(self.placements)
+
+class ConstraintSolver:
+    def __init__(self):
+        self.constraints = []
+    
+    def on_top_of(self, asset1: AssetInstance, asset2: AssetInstance):
+        """
+        Add a constraint that asset1 should be placed on top of asset2.
+
+        Args:
+            asset1: The asset that should be placed on top of asset2. The position of this asset will be adjusted based on the constraint.
+            asset2: The asset that asset1 should be placed on top of.
+        """
+        pass
+    
+    def against_wall(self, asset1: AssetInstance, wall: Wall):
+        """
+        Add a constraint that asset1 should be placed against the wall.
+        This constraint does not specify the orientation of the asset. Please use the point_towards or align_with constraint to specify the orientation of the asset.
+        
+        Args:
+            asset1: the asset that should be placed against the wall
+            wall: the wall that the asset should be placed against
+        """
+        pass
+
+    def distance_constraint(self, asset1: AssetInstance, asset2: AssetInstance, min_distance, max_distance, weight=1):
+        """
+        Add a distance constraint between asset1 and asset2's bounding box center. The distance between asset1 and asset2 should be between min_distance (lower bound) and max_distance (uppser bound).
+
+        Args:
+            asset1: The first asset in the distance constraint. The position of this asset will be adjusted based on the constraint.
+            asset2: The second asset in the distance constraint
+            min_distance: The minimum allowed distance between asset1 and asset2 in meters. If None, there is no lower bound.
+            max_distance: The maximum allowed distance between asset1 and asset2 in meters. If None, there is no upper bound.
+            weight: The weight of this constraint. Default is 1. If this constraint is more important, increase the weight to 10. Otherwise, decrease the weight to 0.1. 
+        
+        Note: If min_distance equals max_distance, the constraint enforces an exact distance between the assets. Consider that the distance might have to depend on the size of the assets.
+        """
+        pass
+    
+    def align_with(self, asset1: AssetInstance, asset2: AssetInstance, angle=0.):
+        """
+        Add a constraint that asset1 should be placed angle degrees away to asset2. Note that this constraint is only for the rotation of the asset.
+
+        Args:
+            asset1: The asset that should be aligned with asset2. The rotation of this asset will be adjusted based on the constraint.
+            asset2: The asset that asset1 should be aligned with.
+            angle: The angle in degrees that asset1 should be rotated away from asset2. Default is 0. If angle=0, then asset1 should be placed parallel to asset2. If angle=180, then asset1 should have an opposite orientation to asset2.
+            Note that asset1 aligning with asset2 does not imply that asset1 is "facing" or "pointing towards" asset2. Use the point_towards constraint for that.
+        """
+        pass
+
+    def point_towards(self, asset1: AssetInstance, asset2: AssetInstance, angle=0.):
+        """
+        Add a constraint that asset1's front should point towards asset2.
+
+        Args:
+            asset1: The asset that should point towards asset2. The rotation of this asset will be adjusted based on the constraint.
+            asset2: The asset that asset1 should point towards.
+            angle: The angle in degrees that asset1 should be rotated away to face asset2. If angle=0, then asset1 should point towards asset2. If angle=180, the back side of asset1 should point towards asset2.
+            Usually, you won't need to specify the angle.
+        """
+        pass
+
+solver = ConstraintSolver()
+
+```
+The list of constraints available are: 
+* z-axis constraints: on_top_of.
+* position-based constraints: against_wall, distance_constraint.
+* orientation-based constraints: align_with, point_towards.
+Specify at least one position-based constraint and one orientation-based constraint for each asset to be placed.
+Objects by default are placed on the floor. For small objects, please remember to specify on_top_of constraints to ensure they are placed on top of a surface.
+
+You will be given a scene with or without existing assets, and a list of assets to be added to the scene. Your program must contain these parts:
+(1) Based on the rendered image of the scene and the layout criteria, calculate and specify the position and rotation for the new asset placements.
+(2) Speicfy constraints: based on the layout criteria, specify the constraints for the asset placements. These constraints will be used to ensure that the layout semantics are maintained when the layout is being adjusted to be physically feasible.
+
+Note:
+* The x-y plane is the floor, the z-axis is the vertical direction, and the origin is at the center of the room. Thus, if a sofa is on the floor, the z-coordinate should be half the z-axis bounding box size of the sofa.
+* A zero degree rotation implies that the object faces +x axis. ([0, 0, radians(90)] means that the object faces +y axis (counterclockwise rotation of 90 degrees).
+
+Here are the dos and don'ts:
+* It is very important to decide on the asset placements for all the assets to be placed. Do not forget to decide on the placemnents of any asset to be placed (not the existing assets).
+* DO NOT HALLUCINATE ASSETS. Only use the assets provided in the scene description.
+* The provided floor plan image is marked with a coordinate system. You can use the coordinate system to specify the placement of the assets in the scene.
+* Enclose your answer in ```python ... ``` tags. You don't have to output the given program again.
+* Write comments to explain the reasoning behind your code. PLEASE DO NOT REPEAT THE GIVEN PROGRAM and do not re-initialize any existing assets or walls.
+* Make sure to specify the constraints for all new asset instances to be placed (i.e. each asset instance in the placements list of the Assets class). 
+* Do not overwrite the varaibles of the assets in the scene as we will be using those variable names to extract the final layout (e.g., if there is a variable name chair, do not write `for chair in sofa.placements: ...`)
+Only the placement of the the first argument (i.e. asset1) will be updated. The ordering of the arguments effectively decide the direction of the constraint.
+If you want to update both assets' placements in the constraint `align_with` for example, you need to specify the constraint twice with the arguments swapped.
+For example, if you specify `solver.point_towards(chair[0], sofa[0])`, the chair will point towards the sofa. If you specify `solver.point_towards(sofa[0], chair[0])`, the sofa will be adjusted to point towards the chair.
+* Please give a comprehensive list of constraints that will ensure the assets are placed correctly in the scene.
+* If you want to specify a constraint bewteen an asset and an absolute coordinate (e.g., the center of the room), you can instantiate a "fixed point" asset by doing AssetInstance(position=[x, y, z]) and use that as the second argument in the constraint function.
+* When there are conflicting constraints between two assets, the first constraint you specify will be used. Thus, specify important constraints first.
+For example, if you want to specify that a chair should be placed at the center of the room, you can do `solver.distance_constraint(chair[0], AssetInstance(position[center_x, center_y, center_z]), 0, 0, weight=10)`.
+
+
+LAYOUT CRITERIA: airy, open, and serene with a focus on natural light and maximizing the feeling of space.
+
+EXISTING SCENE PROGRAM:
+# Walls that define the boundary of the scene
+walls = [
+    Wall(corner1=[0.00, 0.00, 0.00], corner2=[4.00, 0.00, 0.00]),
+    Wall(corner1=[4.00, 0.00, 0.00], corner2=[4.00, 5.00, 0.00]),
+    Wall(corner1=[4.00, 5.00, 0.00], corner2=[0.00, 5.00, 0.00]),
+    Wall(corner1=[0.00, 5.00, 0.00], corner2=[0.00, 0.00, 0.00])
+]
+
+# Existing assets placed in the scene:
+
+# New assets to be placed
+chair = Assets(description="This is a rattan chair with a curved backrest and armrests, featuring a woven texture on the seating surface and back, supported by a metal frame.", size=[0.58, 0.56, 0.80], placements=[AssetInstance() for _ in range(1)])
+bed = Assets(description="A queen-sized bed with a neatly arranged duvet, two fluffed pillows against the headboard, and a clean, smooth appearance.", size=[2.00, 1.76, 1.05], placements=[AssetInstance() for _ in range(1)])
+night_stand = Assets(description="A night stand with a single pull-out drawer and an open shelf below. It has a flat top, and the drawer is fitted with a simple horizontal handle.", size=[0.39, 0.50, 0.44], placements=[AssetInstance() for _ in range(2)])
+table_lamp = Assets(description="This is a table lamp with a cylindrical base and a matching cylindrical shade, likely designed to provide ambient or task lighting.", size=[0.18, 0.18, 0.45], placements=[AssetInstance() for _ in range(2)])
+mat = Assets(description="This is a rectangular mat with a textured diamond pattern, likely used for floor protection or decoration.", size=[0.73, 1.20, 0.02], placements=[AssetInstance() for _ in range(1)])
+chalkboard = Assets(description="This object is a rectangular chalkboard with a wooden frame, featuring a black writing surface that shows some faint chalk marks, and a decorative golden mandala design on the reverse side.", size=[0.04, 0.57, 0.80], placements=[AssetInstance() for _ in range(1)])
+
+CONSTRAINT PROGRAM:

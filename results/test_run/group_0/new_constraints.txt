@@ -1,0 +1,11 @@
+
+=================================
+solver.on_top_of(table_lamp_0, night_stand_0)
+solver.on_top_of(table_lamp_1, night_stand_1)
+solver.against_wall(bed_0, walls_1)
+solver.against_wall(chair_0, walls_2)
+==> (rejected) solver.align_with(chair_0, bed_0, 90)
+solver.against_wall(night_stand_0, walls_1)
+solver.against_wall(night_stand_1, walls_3)
+solver.against_wall(chalkboard_0, walls_3)
+==> (rejected) solver.align_with(chalkboard_0, bed_0, 0)
